@@ -9,18 +9,13 @@ import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import androidx.webkit.WebViewAssetLoader;
-
 import java.util.Locale;
 
 public class MainActivity extends Activity {
-    private static final String HOST = "appassets.androidplatform.net";
-
     private WebView web;
     private TextToSpeech tts;
     private boolean ttsReady = false;
@@ -30,11 +25,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
-                .setDomain(HOST)
-                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
-                .build();
 
         web = new WebView(this);
         web.setBackgroundColor(0xFF120E1F);
@@ -47,14 +37,11 @@ public class MainActivity extends Activity {
 
         web.setWebViewClient(new WebViewClient() {
             @Override
-            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                return loader.shouldInterceptRequest(request.getUrl());
-            }
-
-            @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri u = request.getUrl();
-                if (HOST.equals(u.getHost())) return false;
+                if (u.toString().startsWith("file:///android_asset/")) {
+                    return false;
+                }
                 try {
                     startActivity(new Intent(Intent.ACTION_VIEW, u));
                 } catch (Exception ignored) { }
@@ -77,7 +64,7 @@ public class MainActivity extends Activity {
         });
 
         web.addJavascriptInterface(new Bridge(), "NovaNative");
-        web.loadUrl("https://" + HOST + "/assets/index.html");
+        web.loadUrl("file:///android_asset/index.html");
     }
 
     /** Tell the page the current sentence finished, unless a newer one has started. */
@@ -126,4 +113,4 @@ public class MainActivity extends Activity {
         if (web != null) web.destroy();
         super.onDestroy();
     }
-          }
+}
