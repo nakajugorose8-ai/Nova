@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}body{margin:0}img{max-width:100%}</style>
+<title>Nova Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Chakra+Petch:wght@500;600&display=swap">
+<style>
+/* Layout: phone-first HUD. Nova's stage on top, then stat panels; two columns from 760px. Committed single dark look (game screen). */
+:root {
+  --bg: #120e1f;
+  --panel: #1b1530;
+  --panel-2: #261d42;
+  --line: #3b2f63;
+  --fg: #f5effe;
+  --muted: #ab9dcc;
+  --pink: #ff6fae;
+  --pink-deep: #c2386f;
+  --mint: #6af0d4;
+  --gold: #ffd36a;
+  --danger: #ff7a8a;
+  --hair: #4b2f8c;
+  --face: #ffe0f0;
+  --ink: #2a1b4d;
+  --font-display: "Fredoka", "Nunito", "Trebuchet MS", system-ui, sans-serif;
+  --font-hud: "Chakra Petch", "Rajdhani", "Arial Narrow", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.45;
+  padding-block: 16px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background-image:
+    radial-gradient(circle at 12% -10%, rgba(255,111,174,.16), transparent 45%),
+    radial-gradient(circle at 100% 30%, rgba(106,240,212,.08), transparent 40%);
+  background-attachment: fixed;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+
+/* Boot screen */
+.boot {
+  position: fixed; inset: 0; z-index: 20; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
+  background-image: radial-gradient(circle at 50% 30%, rgba(255,111,174,.22), transparent 55%);
+}
+.boot .av { width: min(52vw, 220px); }
+.boot h1 { margin: 0; font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: .02em; }
+.boot .tag { margin: 0; color: var(--muted); font-family: var(--font-hud); letter-spacing: .14em; text-transform: uppercase; font-size: 12px; }
+.boot form { display: flex; flex-direction: column; gap: 10px; width: min(320px, 100%); }
+.field {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; width: 100%;
+}
+.field::placeholder { color: var(--muted); }
+.btn {
+  border: 0; border-radius: 999px; padding: 12px 20px; font-weight: 600; background: var(--pink); color: #2a0b1b;
+  transition: transform .12s ease, filter .12s ease;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn:active { transform: scale(.97); }
+.btn.ghost { background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); }
+.btn.small { padding: 7px 13px; font-size: 13px; }
+.boot small { color: var(--muted); max-width: 300px; }
+
+/* Avatar */
+.av svg { width: 100%; height: auto; display: block; overflow: visible; }
+.av .ring { fill: none; stroke: var(--mint); stroke-width: 2; stroke-dasharray: 3 9; stroke-linecap: round; transform-origin: 100px 100px; animation: spin 24s linear infinite; }
+.av .ring2 { fill: none; stroke: var(--pink); stroke-width: 1.5; opacity: .35; }
+.av .hair { fill: var(--hair); }
+.av .tie { fill: var(--pink); }
+.av .face { fill: var(--face); }
+.av .band { fill: none; stroke: var(--mint); stroke-width: 5; stroke-linecap: round; }
+.av .cup { fill: var(--mint); }
+.av .mic { fill: none; stroke: var(--mint); stroke-width: 3.5; stroke-linecap: round; }
+.av .eye { fill: var(--ink); }
+.av .shine { fill: #fff; }
+.av .cheek { fill: var(--pink); opacity: .5; }
+.av .mouth { fill: var(--pink-deep); transform-origin: 100px 130px; }
+.av .eyes { transform-origin: 100px 108px; animation: blink 5s infinite; }
+.av.talking .mouth { animation: talk .26s ease-in-out infinite alternate; }
+.av.talking .ring2 { opacity: 1; stroke-width: 2.5; }
+.av.talking svg { filter: drop-shadow(0 0 14px rgba(255,111,174,.55)); }
+.av.asleep .eyes { animation: none; transform: scaleY(.12); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+@keyframes talk { from { transform: scaleY(1); } to { transform: scaleY(2.8); } }
+
+/* Stage */
+.stage { display: flex; flex-direction: column; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 14px; }
+.stage-top { display: flex; gap: 12px; align-items: center; }
+.stage .avbtn { background: none; border: 0; padding: 0; width: 104px; flex: none; border-radius: 50%; }
+.bubble { position: relative; flex: 1; min-width: 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; min-height: 76px; display: flex; align-items: center; }
+.bubble::before { content: ""; position: absolute; left: -7px; top: 50%; width: 12px; height: 12px; background: var(--panel-2); border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: translateY(-50%) rotate(45deg); }
+.bubble p { margin: 0; font-size: 16px; font-weight: 500; overflow-wrap: anywhere; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.vrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.vrow select { flex: 1; min-width: 0; padding: 8px 12px; border-radius: 12px; }
+.xp { display: flex; flex-direction: column; gap: 6px; }
+.xp-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-family: var(--font-hud); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.xp-head b { color: var(--fg); font-weight: 600; }
+.track { height: 10px; background: var(--bg); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
+.fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--pink), var(--gold)); border-radius: 999px; transition: width .6s ease; }
+
+/* Panels */
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel h2 { margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-family: var(--font-hud); font-weight: 600; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--mint); }
+.panel h2 span { color: var(--muted); letter-spacing: .06em; }
+.hint { margin: 0; color: var(--muted); font-size: 13px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row > .field { flex: 1; min-width: 0; }
+.num { font-family: var(--font-hud); font-variant-numeric: tabular-nums; }
+
+/* Today */
+.today { display: flex; gap: 16px; align-items: center; }
+.ring-wrap { position: relative; width: 116px; flex: none; }
+.ring-wrap svg { width: 100%; display: block; transform: rotate(-90deg); }
+.ring-wrap .bg { fill: none; stroke: var(--bg); stroke-width: 10; }
+.ring-wrap .fg { fill: none; stroke: var(--pink); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset .6s ease, stroke .3s; }
+.ring-mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
+.ring-mid b { font-family: var(--font-hud); font-size: 24px; font-weight: 600; }
+.ring-mid span { font-size: 11px; color: var(--muted); }
+.today-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.today-info p { margin: 0; }
+.lim { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.lim input { width: 76px; padding: 6px 10px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-family: var(--font-hud); }
+
+/* Week */
+.plot { position: relative; height: 132px; display: flex; gap: 8px; align-items: flex-end; border-bottom: 1px solid var(--line); }
+.col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-width: 0; }
+.col .v { height: 16px; font-size: 11px; color: var(--muted); font-family: var(--font-hud); font-variant-numeric: tabular-nums; }
+.col .bar { width: 100%; max-width: 36px; border-radius: 8px 8px 2px 2px; background: var(--panel-2); border: 1px solid var(--line); min-height: 3px; height: calc((100% - 16px) * var(--p)); }
+.col.today .bar { background: var(--pink); border-color: var(--pink); }
+.col.has .bar { background: color-mix(in srgb, var(--mint) 55%, var(--panel-2)); border-color: var(--mint); }
+.col.today.has .bar { background: var(--pink); border-color: var(--pink); }
+.limit { position: absolute; left: 0; right: 0; bottom: calc((100% - 16px) * var(--lp)); border-top: 1.5px dashed var(--gold); pointer-events: none; }
+.limit i { position: absolute; right: 0; top: -17px; font-style: normal; font-size: 10px; color: var(--gold); font-family: var(--font-hud); letter-spacing: .08em; }
+.days { display: flex; gap: 8px; }
+.days span { flex: 1; text-align: center; font-size: 12px; color: var(--muted); font-family: var(--font-hud); }
+.days span.today { color: var(--pink); font-weight: 600; }
+
+/* Achievements */
+.ach { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
+.card.on { border-color: var(--pink); box-shadow: 0 0 0 1px rgba(255,111,174,.35), 0 0 18px rgba(255,111,174,.18); }
+.hex { width: 46px; height: 52px; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: var(--bg); color: var(--muted); display: grid; place-items: center; font-family: var(--font-hud); font-weight: 600; font-size: 13px; }
+.card.on .hex { background: var(--pink); color: #2a0b1b; }
+.card b { font-weight: 600; font-size: 14px; }
+.card small { color: var(--muted); font-size: 12px; line-height: 1.3; }
+.card .track { width: 100%; height: 6px; }
+.card .fill { background: var(--mint); }
+.card.on .fill { background: var(--pink); }
+
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 6px 12px; font-size: 13px; color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--mint); border-color: var(--mint); color: #05302a; font-weight: 600; }
+
+/* Notes */
+.notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.notes li { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.notes li span { min-width: 0; overflow-wrap: anywhere; }
+.x { border: 0; background: none; color: var(--muted); font-size: 18px; line-height: 1; padding: 0 2px; }
+.x:hover { color: var(--danger); }
+.empty { color: var(--muted); font-size: 13px; margin: 0; }
+
+.sess { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.sess li { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.sess li span:last-child { font-family: var(--font-hud); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tag-ex { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); font-family: var(--font-hud); border: 1px solid var(--gold); border-radius: 6px; padding: 1px 5px; margin-left: 6px; }
+
+.toast { position: fixed; z-index: 30; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 420px; background: var(--pink); color: #2a0b1b; border-radius: 16px; padding: 12px 16px; font-weight: 600; transform: translateY(160%); transition: transform .3s ease; text-align: center; }
+.toast.show { transform: translateY(0); }
+
+@media (min-width: 760px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+  .span2 { grid-column: 1 / -1; }
+  .stage .avbtn { width: 132px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .av .ring, .av .eyes, .av.talking .mouth { animation: none; }
+  .fill, .toast, .ring-wrap .fg { transition: none; }
+}
+</style>
+
+
+</head>
+<body>
+<div class="boot" id="boot">
+  <div class="av asleep" id="bootAv" aria-hidden="true"></div>
+  <h1>Nova</h1>
+  <p class="tag">Game companion</p>
+  <form id="bootForm" autocomplete="off">
+    <input class="field" id="nameIn" maxlength="20" placeholder="Your player name" aria-label="Your player name">
+    <button class="btn" type="submit">Wake Nova</button>
+  </form>
+  <small>Tap to start so your phone lets Nova talk.</small>
+</div>
+
+<main class="wrap" id="app" hidden>
+  <section class="stage" aria-label="Nova">
+    <div class="stage-top">
+      <button class="avbtn" id="talkBtn" aria-label="Talk to Nova"><div class="av" id="stageAv"></div></button>
+      <div class="bubble"><p id="line" aria-live="polite">Tap me for your briefing.</p></div>
+    </div>
+    <div class="actions">
+      <button class="btn small" id="briefBtn" type="button">Briefing</button>
+      <button class="btn small ghost" id="logJump" type="button">Log session</button>
+      <button class="btn small ghost" id="muteBtn" type="button" aria-pressed="false">Voice on</button>
+    </div>
+    <div class="vrow">
+      <select class="field" id="voiceSel" aria-label="Nova's voice"></select>
+      <button class="btn small ghost" id="testBtn" type="button">Test voice</button>
+    </div>
+    <p class="hint" id="vstat"></p>
+    <div class="xp">
+      <div class="xp-head"><span>Level <b id="lvl">1</b> · <b id="rank">Rookie</b></span><span><b id="xpNow">0</b> / <b id="xpNext">50</b> XP</span></div>
+      <div class="track"><div class="fill" id="xpFill"></div></div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="hToday">
+      <h2 id="hToday">Today <span id="todayDate"></span></h2>
+      <div class="today">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="bg" cx="60" cy="60" r="48"/><circle class="fg" id="ringFg" cx="60" cy="60" r="48" stroke-dasharray="301.6" stroke-dashoffset="301.6"/></svg>
+          <div class="ring-mid"><b id="ringPct">0%</b><span>of limit</span></div>
+        </div>
+        <div class="today-info">
+          <p><b class="num" id="todayDur" style="font-size:22px">0m</b></p>
+          <p class="hint" id="todayNote"></p>
+          <label class="lim">Daily limit <input id="limit" type="number" min="15" max="1440" step="15" inputmode="numeric"> min</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="hWeek">
+      <h2 id="hWeek">Last 7 days <span id="weekTotal"></span></h2>
+      <div class="plot" id="plot"></div>
+      <div class="days" id="days"></div>
+    </section>
+
+    <section class="panel span2" id="pLog" aria-labelledby="hLog">
+      <h2 id="hLog">Log a session</h2>
+      <form id="logForm" class="row" autocomplete="off">
+        <input class="field" id="gameIn" list="gameList" placeholder="Game name" aria-label="Game name" required maxlength="40">
+        <datalist id="gameList"></datalist>
+        <input class="field num" id="minIn" type="number" min="1" max="1440" inputmode="numeric" placeholder="Minutes" aria-label="Minutes played" required style="max-width:110px;flex:none">
+        <button class="btn" type="submit">Add</button>
+      </form>
+      <div class="chips" id="presets">
+        <button class="chip" type="button" data-m="15">15m</button>
+        <button class="chip" type="button" data-m="30">30m</button>
+        <button class="chip" type="button" data-m="60">1h</button>
+        <button class="chip" type="button" data-m="120">2h</button>
+      </div>
+      <ul class="sess" id="sessList"></ul>
+      <div class="row" id="sampleRow">
+        <p class="hint" style="flex:1;min-width:180px">Some sessions are examples so you can see how Nova works. Your own sessions count the same way.</p>
+        <button class="btn small ghost" id="clearSamples" type="button">Remove examples</button>
+      </div>
+    </section>
+
+    <section class="panel span2" aria-labelledby="hAch">
+      <h2 id="hAch">Achievements <span id="achCount"></span></h2>
+      <div class="ach" id="ach"></div>
+    </section>
+
+    <section class="panel span2" aria-labelledby="hNotes">
+      <h2 id="hNotes">Notes <span id="noteCount"></span></h2>
+      <form id="noteForm" class="row" autocomplete="off">
+        <input class="field" id="noteIn" placeholder="Add a note for Nova to remember" aria-label="New note" maxlength="140" required>
+        <button class="btn" type="submit">Save</button>
+        <button class="btn ghost" id="readNotes" type="button">Read aloud</button>
+      </form>
+      <ul class="notes" id="notes"></ul>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var KEY = 'nova-companion-v1';
+  var DAY = 864e5;
+  var uid = function () { return Math.random().toString(36).slice(2, 9); };
+
+  /* ---------- Avatar ---------- */
+  var AV = '<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">' +
+    '<circle class="ring" cx="100" cy="100" r="95"/><circle class="ring2" cx="100" cy="100" r="88"/>' +
+    '<ellipse class="hair" cx="100" cy="100" rx="68" ry="70"/>' +
+    '<circle class="hair" cx="36" cy="128" r="17"/><circle class="hair" cx="164" cy="128" r="17"/>' +
+    '<circle class="tie" cx="40" cy="104" r="7"/><circle class="tie" cx="160" cy="104" r="7"/>' +
+    '<ellipse class="face" cx="100" cy="106" rx="56" ry="54"/>' +
+    '<path class="hair" d="M42 98 Q58 42 100 46 Q142 42 158 98 Q132 72 100 80 Q68 72 42 98 Z"/>' +
+    '<path class="band" d="M42 100 Q42 50 100 48 Q158 50 158 100"/>' +
+    '<rect class="cup" x="34" y="94" width="14" height="30" rx="7"/><rect class="cup" x="152" y="94" width="14" height="30" rx="7"/>' +
+    '<path class="mic" d="M41 124 Q48 154 78 148"/><circle class="tie" cx="81" cy="148" r="5"/>' +
+    '<g class="eyes"><ellipse class="eye" cx="78" cy="108" rx="9" ry="12"/><ellipse class="eye" cx="122" cy="108" rx="9" ry="12"/>' +
+    '<circle class="shine" cx="81" cy="103" r="3.2"/><circle class="shine" cx="125" cy="103" r="3.2"/></g>' +
+    '<ellipse class="cheek" cx="62" cy="126" rx="9" ry="5"/><ellipse class="cheek" cx="138" cy="126" rx="9" ry="5"/>' +
+    '<ellipse class="mouth" cx="100" cy="130" rx="7" ry="3"/></svg>';
+  $('bootAv').innerHTML = AV;
+  $('stageAv').innerHTML = AV;
+
+  /* ---------- State ---------- */
+  function dayKey(t) {
+    var d = new Date(t);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function dayNum(k) { var p = k.split('-').map(Number); return Math.round(Date.UTC(p[0], p[1] - 1, p[2]) / DAY); }
+  function defaults() {
+    var now = Date.now();
+    var startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+    function mk(game, min, ago, hour) {
+      var d = new Date(now - ago * DAY); d.setHours(hour, 10, 0, 0);
+      var ts = ago === 0 ? Math.max(startToday.getTime() + 60000, now - 3 * 36e5) : d.getTime();
+      return { id: uid(), game: game, min: min, ts: ts, sample: true };
+    }
+    return {
+      name: 'Player', muted: false, limit: 180,
+      sessions: [mk('Valorant', 75, 6, 19), mk('Minecraft', 50, 5, 16), mk('Valorant', 90, 4, 20), mk('Genshin Impact', 120, 3, 15), mk('Minecraft', 65, 2, 22), mk('Valorant', 55, 1, 18), mk('Genshin Impact', 40, 0, 9)],
+      notes: [{ id: uid(), text: 'Beat the boss in Genshin this weekend', ts: now }]
+    };
+  }
+  var S;
+  try { var raw = localStorage.getItem(KEY); S = raw ? Object.assign(defaults(), JSON.parse(raw)) : defaults(); } catch (e) { S = defaults(); }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+  /* ---------- Derived data ---------- */
+  function minutesOn(key) { return S.sessions.reduce(function (a, s) { return dayKey(s.ts) === key ? a + s.min : a; }, 0); }
+  function todayMin() { return minutesOn(dayKey(Date.now())); }
+  function totalMin() { return S.sessions.reduce(function (a, s) { return a + s.min; }, 0); }
+  function levelOf(xp) { return Math.floor(Math.sqrt(xp / 50)) + 1; }
+  var RANKS = ['Rookie', 'Challenger', 'Veteran', 'Elite', 'Legend', 'Mythic'];
+  function longestStreak() {
+    var keys = Array.from(new Set(S.sessions.map(function (s) { return dayKey(s.ts); }))).map(dayNum).sort(function (a, b) { return a - b; });
+    var best = 0, run = 0, prev = null;
+    keys.forEach(function (n) { run = prev !== null && n === prev + 1 ? run + 1 : 1; prev = n; if (run > best) best = run; });
+    return best;
+  }
+  function gamesSet() { return new Set(S.sessions.map(function (s) { return s.game.toLowerCase(); })); }
+  var ACH = [
+    { id: 'first', name: 'First Blood', desc: 'Log your first session', face: '1', cur: function () { return S.sessions.length; }, t: 1 },
+    { id: 'variety', name: 'Variety Pack', desc: 'Play 3 different games', face: '3', cur: function () { return gamesSet().size; }, t: 3 },
+    { id: 'streak', name: 'On a Roll', desc: 'Play 3 days in a row', face: '3d', cur: longestStreak, t: 3 },
+    { id: 'marathon', name: 'Marathoner', desc: 'One session of 2 hours', face: '2h', cur: function () { return S.sessions.reduce(function (a, s) { return Math.max(a, s.min); }, 0); }, t: 120 },
+    { id: 'owl', name: 'Night Owl', desc: 'Log a session after 22:00', face: '22', cur: function () { return S.sessions.some(function (s) { return new Date(s.ts).getHours() >= 22; }) ? 1 : 0; }, t: 1 },
+    { id: 'century', name: 'Ten Hour Club', desc: 'Play 10 hours in total', face: '10h', cur: totalMin, t: 600 },
+    { id: 'scribe', name: 'Scribe', desc: 'Keep 3 notes', face: '3n', cur: function () { return S.notes.length; }, t: 3 }
+  ];
+  function unlocked() { return ACH.filter(function (a) { return a.cur() >= a.t; }).map(function (a) { return a.id; }); }
+
+  /* ---------- Text helpers ---------- */
+  function dur(m) {
+    m = Math.round(m);
+    var h = Math.floor(m / 60), r = m % 60, out = [];
+    if (h) out.push(h + (h === 1 ? ' hour' : ' hours'));
+    if (r || !h) out.push(r + (r === 1 ? ' minute' : ' minutes'));
+    return out.join(' ');
+  }
+  function short(m) { m = Math.round(m); return m >= 60 ? Math.floor(m / 60) + 'h' + (m % 60 ? ' ' + (m % 60) + 'm' : '') : m + 'm'; }
+  function greet() { var h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
+  function weekMinutes() {
+    var out = [];
+    for (var i = 6; i >= 0; i--) { var t = Date.now() - i * DAY; out.push({ key: dayKey(t), d: new Date(t), min: minutesOn(dayKey(t)) }); }
+    return out;
+  }
+  function briefing() {
+    var t = todayMin(), lim = S.limit, pct = Math.round(t / lim * 100), L = [];
+    L.push(greet() + ', ' + S.name + '! I am Nova, your game buddy.');
+    if (t === 0) L.push('You have not played yet today. Your limit is ' + dur(lim) + '.');
+    else {
+      L.push('Today you have played ' + dur(t) + ', which is ' + pct + ' percent of your limit.');
+      if (t > lim) L.push('That is over your limit. Time for a break, okay?');
+      else if (pct >= 80) L.push('You are close to your limit, so maybe one more round.');
+    }
+    var wk = weekMinutes(), wt = wk.reduce(function (a, d) { return a + d.min; }, 0), cut = Date.now() - 7 * DAY, by = {};
+    S.sessions.forEach(function (s) { if (s.ts >= cut) by[s.game] = (by[s.game] || 0) + s.min; });
+    var top = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; })[0];
+    if (wt) L.push('This week you played ' + dur(wt) + ' in total' + (top ? ', mostly ' + top : '') + '.');
+    var xp = totalMin(), lv = levelOf(xp);
+    L.push('You are level ' + lv + ', a ' + RANKS[Math.min(lv - 1, RANKS.length - 1)] + ', with ' + xp + ' XP.');
+    var un = unlocked(), next = ACH.filter(function (a) { return un.indexOf(a.id) < 0; })[0];
+    L.push('You have unlocked ' + un.length + ' of ' + ACH.length + ' achievements.' + (next ? ' Next up is ' + next.name + '.' : ' You got them all!'));
+    if (S.notes.length) L.push('You have ' + S.notes.length + (S.notes.length === 1 ? ' note' : ' notes') + '. Latest one says: ' + S.notes[S.notes.length - 1].text + '.');
+    else L.push('You have no notes yet.');
+    L.push('Ready when you are, ' + S.name + '. Let us play!');
+    return L;
+  }
+
+  /* ---------- Speech ---------- */
+  var voice = null, token = 0, timer = null, keep = [];
+  function setVoiceStatus(msg, warn) {
+    var el = $('vstat'); if (!el) return;
+    el.textContent = msg || (!canSpeak ? 'This browser cannot speak, so Nova will show text only.' : voice ? 'Voice: ' + voice.name : 'No voice found yet. Your device may need a text-to-speech engine installed.');
+    el.style.color = warn ? 'var(--gold)' : '';
+  }
+  var canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+  function pickVoice() {
+    if (!canSpeak) return;
+    var vs = speechSynthesis.getVoices(); if (!vs.length) return;
+    var en = vs.filter(function (v) { return /^en/i.test(v.lang); });
+    var prefs = [/samantha/i, /zira/i, /aria/i, /jenny/i, /google uk english female/i, /google us english/i, /female/i, /karen/i, /victoria/i, /moira/i, /tessa/i];
+    var saved = S.voiceName && vs.find(function (v) { return v.name === S.voiceName; });
+    if (saved) voice = saved;
+    else if (!voice) {
+      for (var i = 0; i < prefs.length && !voice; i++) { var f = en.find(function (v) { return prefs[i].test(v.name); }); if (f) voice = f; }
+      if (!voice) voice = en[0] || vs[0];
+    }
+    var sel = $('voiceSel'); sel.innerHTML = '';
+    (en.length ? en : vs).forEach(function (v) { var o = document.createElement('option'); o.value = v.name; o.textContent = v.name; if (v === voice) o.selected = true; sel.appendChild(o); });
+    setVoiceStatus();
+  }
+  if (canSpeak) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+  function setTalking(on) { $('stageAv').classList.toggle('talking', !!on); }
+  function say(lines) {
+    if (typeof lines === 'string') lines = [lines];
+    var my = ++token; clearTimeout(timer);
+    if (window.NovaNative) NovaNative.stop();
+    var busy = canSpeak && (speechSynthesis.speaking || speechSynthesis.pending);
+    if (busy) speechSynthesis.cancel();
+    var i = 0;
+    function next() {
+      if (my !== token) return;
+      if (i >= lines.length) { setTalking(false); return; }
+      var text = lines[i++];
+      $('line').textContent = text;
+      if (window.NovaNative && !S.muted) { setTalking(true); window.__novaNext = next; NovaNative.speak(text); return; }
+      if (!canSpeak || S.muted) { setTalking(true); timer = setTimeout(next, Math.max(1800, text.length * 55)); return; }
+      var u = new SpeechSynthesisUtterance(text);
+      if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'en-US';
+      u.pitch = 1.55; u.rate = 1.04; u.volume = 1;
+      var started = false, done = false, wd;
+      var finish = function () { if (done) return; done = true; clearTimeout(wd); next(); };
+      wd = setTimeout(function () {
+        if (started) return;
+        setVoiceStatus('Nothing played. Turn up media volume, switch off silent mode, pick another voice, then tap Test voice.', true);
+        setTalking(true); wd = setTimeout(finish, Math.max(1800, text.length * 55));
+      }, 3000);
+      u.onstart = function () {
+        started = true; clearTimeout(wd); setVoiceStatus();
+        if (my === token) setTalking(true);
+        wd = setTimeout(finish, text.length * 130 + 2500);
+      };
+      u.onend = finish;
+      u.onerror = function (ev) {
+        var er = ev && ev.error;
+        if (er && er !== 'canceled' && er !== 'interrupted') setVoiceStatus('Voice error: ' + er, true);
+        finish();
+      };
+      keep.push(u); if (keep.length > 6) keep.shift();
+      try { speechSynthesis.resume(); } catch (e) {}
+      if (busy && i === 1) setTimeout(function () { if (my === token) speechSynthesis.speak(u); }, 90);
+      else speechSynthesis.speak(u);
+    }
+    next();
+  }
+  var ac;
+  function chime() {
+    if (S.muted) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      [660, 880, 1320].forEach(function (f, i) {
+        var o = ac.createOscillator(), g = ac.createGain(), t0 = ac.currentTime + i * 0.09;
+        o.type = 'triangle'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.26);
+        o.connect(g); g.connect(ac.destination); o.start(t0); o.stop(t0 + 0.3);
+      });
+    } catch (e) {}
+  }
+  var toastT;
+  function toast(msg) { var el = $('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(function () { el.classList.remove('show'); }, 3200); }
+
+  /* ---------- Render ---------- */
+  function renderXP() {
+    var xp = totalMin(), lv = levelOf(xp), lo = 50 * (lv - 1) * (lv - 1), hi = 50 * lv * lv;
+    $('lvl').textContent = lv; $('rank').textContent = RANKS[Math.min(lv - 1, RANKS.length - 1)];
+    $('xpNow').textContent = xp; $('xpNext').textContent = hi;
+    $('xpFill').style.width = Math.min(100, (xp - lo) / (hi - lo) * 100) + '%';
+  }
+  function renderToday() {
+    var t = todayMin(), lim = S.limit, p = t / lim, C = 301.6;
+    $('todayDate').textContent = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    $('todayDur').textContent = t ? short(t) : '0m';
+    $('ringPct').textContent = Math.round(p * 100) + '%';
+    var fg = $('ringFg');
+    fg.style.strokeDashoffset = C * (1 - Math.min(p, 1));
+    fg.style.stroke = p > 1 ? 'var(--danger)' : p >= 0.8 ? 'var(--gold)' : 'var(--pink)';
+    $('todayNote').textContent = t > lim ? 'Over your limit by ' + short(t - lim) + '.' : short(lim - t) + ' left today.';
+    $('limit').value = lim;
+  }
+  function renderWeek() {
+    var wk = weekMinutes(), max = Math.max.apply(null, wk.map(function (d) { return d.min; }).concat([S.limit])) * 1.08;
+    var plot = $('plot'), days = $('days'); plot.innerHTML = ''; days.innerHTML = '';
+    wk.forEach(function (d, i) {
+      var col = document.createElement('div'); col.className = 'col' + (i === 6 ? ' today' : '') + (d.min ? ' has' : '');
+      var v = document.createElement('div'); v.className = 'v'; v.textContent = d.min ? short(d.min) : '';
+      var b = document.createElement('div'); b.className = 'bar'; b.style.setProperty('--p', d.min / max);
+      col.appendChild(v); col.appendChild(b); plot.appendChild(col);
+      var s = document.createElement('span'); s.textContent = d.d.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 3); if (i === 6) s.className = 'today'; days.appendChild(s);
+    });
+    var line = document.createElement('div'); line.className = 'limit'; line.style.setProperty('--lp', S.limit / max);
+    line.innerHTML = '<i>LIMIT</i>'; plot.appendChild(line);
+    $('weekTotal').textContent = short(wk.reduce(function (a, d) { return a + d.min; }, 0)) + ' total';
+  }
+  function renderAch() {
+    var box = $('ach'); box.innerHTML = ''; var n = 0;
+    ACH.forEach(function (a) {
+      var cur = a.cur(), on = cur >= a.t; if (on) n++;
+      var c = document.createElement('div'); c.className = 'card' + (on ? ' on' : '');
+      c.innerHTML = '<div class="hex"></div><b></b><small></small><div class="track"><div class="fill"></div></div>';
+      c.querySelector('.hex').textContent = a.face; c.querySelector('b').textContent = a.name; c.querySelector('small').textContent = a.desc;
+      var f = c.querySelector('.fill'); f.style.width = Math.min(100, cur / a.t * 100) + '%';
+      box.appendChild(c);
+    });
+    $('achCount').textContent = n + ' / ' + ACH.length;
+  }
+  function renderNotes() {
+    var ul = $('notes'); ul.innerHTML = '';
+    if (!S.notes.length) { var li = document.createElement('li'); li.style.display = 'block'; li.innerHTML = '<p class="empty">No notes yet. Add one above and Nova will remind you.</p>'; ul.appendChild(li); }
+    S.notes.slice().reverse().forEach(function (n) {
+      var li = document.createElement('li'), sp = document.createElement('span'), x = document.createElement('button');
+      sp.textContent = n.text; x.className = 'x'; x.type = 'button'; x.setAttribute('aria-label', 'Delete note'); x.textContent = '×';
+      x.onclick = function () { S.notes = S.notes.filter(function (m) { return m.id !== n.id; }); save(); renderNotes(); renderAch(); };
+      li.appendChild(sp); li.appendChild(x); ul.appendChild(li);
+    });
+    $('noteCount').textContent = S.notes.length;
+  }
+  function renderSessions() {
+    var ul = $('sessList'); ul.innerHTML = '';
+    S.sessions.slice().sort(function (a, b) { return b.ts - a.ts; }).slice(0, 5).forEach(function (s) {
+      var li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('span');
+      a.textContent = s.game; if (s.sample) { var t = document.createElement('em'); t.className = 'tag-ex'; t.textContent = 'example'; a.appendChild(t); }
+      b.textContent = new Date(s.ts).toLocaleDateString(undefined, { weekday: 'short' }) + ' · ' + short(s.min);
+      li.appendChild(a); li.appendChild(b); ul.appendChild(li);
+    });
+    var dl = $('gameList'); dl.innerHTML = '';
+    Array.from(new Set(S.sessions.map(function (s) { return s.game; }))).forEach(function (g) { var o = document.createElement('option'); o.value = g; dl.appendChild(o); });
+    $('sampleRow').hidden = !S.sessions.some(function (s) { return s.sample; });
+  }
+  function renderMute() { $('muteBtn').textContent = S.muted ? 'Voice off' : 'Voice on'; $('muteBtn').setAttribute('aria-pressed', String(S.muted)); }
+  function renderAll() { renderXP(); renderToday(); renderWeek(); renderAch(); renderNotes(); renderSessions(); renderMute(); }
+
+  /* ---------- Actions ---------- */
+  function afterChange(prevUnlocked, prevLevel, lines) {
+    var now = unlocked(), fresh = ACH.filter(function (a) { return now.indexOf(a.id) >= 0 && prevUnlocked.indexOf(a.id) < 0; });
+    var lv = levelOf(totalMin());
+    if (lv > prevLevel) lines.push('Level up! You are now level ' + lv + ', a ' + RANKS[Math.min(lv - 1, RANKS.length - 1)] + '.');
+    fresh.forEach(function (a) { lines.push('Achievement unlocked: ' + a.name + '!'); });
+    if (fresh.length) { chime(); toast('Unlocked: ' + fresh.map(function (a) { return a.name; }).join(', ')); }
+    else if (lv > prevLevel) { chime(); toast('Level ' + lv); }
+    renderAll(); say(lines);
+  }
+  $('bootForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var n = $('nameIn').value.trim(); if (n) S.name = n; save();
+    $('boot').hidden = true; $('app').hidden = false;
+    renderAll(); say(briefing());
+  });
+  $('nameIn').value = S.name !== 'Player' ? S.name : '';
+  $('briefBtn').onclick = $('talkBtn').onclick = function () { say(briefing()); };
+  $('testBtn').onclick = function () { say('Hi ' + S.name + '! Can you hear me now?'); };
+  $('voiceSel').addEventListener('change', function () {
+    var vs = canSpeak ? speechSynthesis.getVoices() : [], v = vs.find(function (x) { return x.name === $('voiceSel').value; });
+    if (v) { voice = v; S.voiceName = v.name; save(); setVoiceStatus(); say('Hi ' + S.name + '! How do I sound?'); }
+  });
+  $('logJump').onclick = function () { $('pLog').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('gameIn').focus({ preventScroll: true }); };
+  $('muteBtn').onclick = function () { S.muted = !S.muted; save(); renderMute(); if (S.muted && canSpeak) speechSynthesis.cancel(); say(S.muted ? 'Okay, I will stay quiet. You can still read me.' : 'I am back! Can you hear me?'); };
+  $('limit').addEventListener('change', function () { var v = parseInt(this.value, 10); if (v >= 15 && v <= 1440) { S.limit = v; save(); renderToday(); renderWeek(); } else this.value = S.limit; });
+  $('presets').addEventListener('click', function (e) { var m = e.target.getAttribute && e.target.getAttribute('data-m'); if (m) { $('minIn').value = m; $('minIn').focus(); } });
+  $('logForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var g = $('gameIn').value.trim(), m = parseInt($('minIn').value, 10);
+    if (!g || !(m > 0)) return;
+    var pu = unlocked(), pl = levelOf(totalMin());
+    S.sessions.push({ id: uid(), game: g, min: m, ts: Date.now() });
+    save(); $('minIn').value = '';
+    var lines = ['Logged ' + dur(m) + ' of ' + g + '.'], t = todayMin();
+    if (t > S.limit) lines.push('You are over your daily limit now. Maybe take a break!');
+    afterChange(pu, pl, lines);
+  });
+  $('clearSamples').onclick = function () { S.sessions = S.sessions.filter(function (s) { return !s.sample; }); save(); renderAll(); say('Examples removed. From now on, it is all your real play time.'); };
+  $('noteForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var t = $('noteIn').value.trim(); if (!t) return;
+    var pu = unlocked(), pl = levelOf(totalMin());
+    S.notes.push({ id: uid(), text: t, ts: Date.now() }); save(); $('noteIn').value = '';
+    afterChange(pu, pl, ['Saved your note.']);
+  });
+  $('readNotes').onclick = function () {
+    if (!S.notes.length) { say('You have no notes yet.'); return; }
+    say(['You have ' + S.notes.length + (S.notes.length === 1 ? ' note.' : ' notes.')].concat(S.notes.slice().reverse().map(function (n) { return n.text + '.'; })));
+  };
+
+  if (window.NovaNative) { $('voiceSel').hidden = true; setVoiceStatus('Voice: Android text-to-speech'); }
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
